@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      - db
     volumes:
       - ./:/var/www/html
   
@@ -66,7 +68,6 @@ services:
 
   db:
     image: mysql:8.0
-    profiles: ["db"]
     ports:
       - "3306:3306"
     environment:
