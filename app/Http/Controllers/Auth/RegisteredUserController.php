@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
@@ -38,9 +37,7 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        $this->ensureInvitadoRoleConfigured();
-
-        if (! $user->hasRole('invitado')) {
+        if (! $user->roles()->exists() && Role::query()->where('name', 'invitado')->where('guard_name', 'web')->exists()) {
             $user->assignRole('invitado');
         }
 
@@ -61,20 +58,4 @@ class RegisteredUserController extends Controller
         ], 201);
     }
 
-    private function ensureInvitadoRoleConfigured(): void
-    {
-        $role = Role::firstOrCreate([
-            'name' => 'invitado',
-            'guard_name' => 'web',
-        ]);
-
-        $permission = Permission::firstOrCreate([
-            'name' => 'view-index',
-            'guard_name' => 'web',
-        ]);
-
-        if (! $role->hasPermissionTo($permission)) {
-            $role->givePermissionTo($permission);
-        }
-    }
 }
