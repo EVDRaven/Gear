@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -25,6 +27,13 @@ class AuthenticatedSessionController extends Controller
             $request->authenticate();
 
             $request->session()->regenerate();
+
+            $user = $request->user();
+
+            if ($user && $user->roles->isEmpty()) {
+                $this->ensureInvitadoRoleConfigured();
+                $user->assignRole('invitado');
+            }
 
             return redirect()->intended('/index');
         }
@@ -44,6 +53,11 @@ class AuthenticatedSessionController extends Controller
         }
 
         RateLimiter::clear($request->throttleKey());
+
+        if ($user->roles->isEmpty()) {
+            $this->ensureInvitadoRoleConfigured();
+            $user->assignRole('invitado');
+        }
 
         $token = $user->createToken('auth')->plainTextToken;
 
@@ -76,5 +90,22 @@ class AuthenticatedSessionController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    private function ensureInvitadoRoleConfigured(): void
+    {
+        $role = Role::firstOrCreate([
+            'name' => 'invitado',
+            'guard_name' => 'web',
+        ]);
+
+        $permission = Permission::firstOrCreate([
+            'name' => 'view-index',
+            'guard_name' => 'web',
+        ]);
+
+        if (! $role->hasPermissionTo($permission)) {
+            $role->givePermissionTo($permission);
+        }
     }
 }

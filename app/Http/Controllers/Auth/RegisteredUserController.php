@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -36,6 +38,12 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
+        $this->ensureInvitadoRoleConfigured();
+
+        if (! $user->hasRole('invitado')) {
+            $user->assignRole('invitado');
+        }
+
         if (! $request->is('api/*') && ! $request->expectsJson()) {
             Auth::login($user);
 
@@ -51,5 +59,22 @@ class RegisteredUserController extends Controller
             'token_type' => 'Bearer',
             'user' => $user,
         ], 201);
+    }
+
+    private function ensureInvitadoRoleConfigured(): void
+    {
+        $role = Role::firstOrCreate([
+            'name' => 'invitado',
+            'guard_name' => 'web',
+        ]);
+
+        $permission = Permission::firstOrCreate([
+            'name' => 'view-index',
+            'guard_name' => 'web',
+        ]);
+
+        if (! $role->hasPermissionTo($permission)) {
+            $role->givePermissionTo($permission);
+        }
     }
 }

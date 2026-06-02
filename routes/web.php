@@ -30,5 +30,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/index', [DashboardsController::class, 'index'])->name('index');
+    Route::get('/index', [DashboardsController::class, 'index'])
+        ->middleware('permission:view-index')
+        ->name('index');
 });
